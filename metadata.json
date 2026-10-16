@@ -1,0 +1,6 @@
+{
+  "name": "MapScraper Web Suite",
+  "description": "Full-featured web wrapper, interactive map coordinate selector, Excel sheet viewer, token billing, and Docker runner for Google Maps Scraper CLI",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
