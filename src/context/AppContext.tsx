@@ -449,8 +449,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const res = await fetch('/api/scrape/results');
       if (res.ok) {
         const data = await res.json();
-        if (data.success && Array.isArray(data.places) && data.places.length > 0) {
+        if (Array.isArray(data.places)) {
           setPlaces(data.places);
+          if (data.places.length === 0) {
+            showToast('No places are available in the scraper output.', 'info');
+            return;
+          }
+          setActiveTab('spreadsheet');
           showToast(`Synced ${data.places.length} places from actual results file!`, 'success');
           return;
         }
@@ -523,76 +528,130 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Maps scraper running in the background...', 'info');
 
     try {
-      let finalResults: PlaceResult[] = [];
-      let serverCallSuccess = false;
+      const startResponse = await fetch('/api/scrape/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flags: runFlags }),
+      });
+      const startData = await startResponse.json();
+      if (!startResponse.ok || !startData.success) {
+        throw new Error(startData.message || `Scraper request failed (${startResponse.status}).`);
+      }
 
-      // Try running via actual backend endpoint
-      try {
-        const resp = await fetch('/api/scrape/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flags: runFlags }),
-        });
+      const serverJobId = typeof startData.jobId === 'string' ? startData.jobId : newJob.id;
+      let latestJob: ScrapingJob = { ...newJob, id: serverJobId };
+      let jobStatus = {
+        isRunning: Boolean(startData.isRunning),
+        exitCode: startData.exitCode as number | null | undefined,
+        progress: typeof startData.progress === 'number' ? startData.progress : latestJob.progress,
+        scrapedCount: typeof startData.total === 'number' ? startData.total : latestJob.scrapedCount,
+        logs: Array.isArray(startData.logs) ? startData.logs : [],
+      };
 
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.success && Array.isArray(data.places) && data.places.length > 0) {
-            finalResults = data.places;
-            serverCallSuccess = true;
-            if (Array.isArray(data.logs)) {
-              newJob.logs = [...newJob.logs, ...data.logs.map((l: any, i: number) => ({
-                id: `srv_${i}`,
-                timestamp: l.timestamp,
-                level: l.level,
-                message: l.message,
-              }))];
-            }
-          }
+      while (jobStatus.isRunning) {
+        if (cancelRef.current) return;
+        await new Promise(resolve => window.setTimeout(resolve, 1000));
+        if (cancelRef.current) return;
+
+        const statusResponse = await fetch('/api/scrape/status');
+        const statusData = await statusResponse.json();
+        if (!statusResponse.ok) {
+          throw new Error(statusData.message || `Could not read scraper status (${statusResponse.status}).`);
         }
-      } catch {
-        // Fall back to reading from file or parsing actual dataset
+        if (statusData.id !== serverJobId) {
+          throw new Error('The scraper status no longer matches the job started by this session.');
+        }
+
+        jobStatus = {
+          isRunning: Boolean(statusData.isRunning),
+          exitCode: statusData.exitCode as number | null | undefined,
+          progress: typeof statusData.progress === 'number' ? statusData.progress : latestJob.progress,
+          scrapedCount: typeof statusData.scrapedCount === 'number' ? statusData.scrapedCount : latestJob.scrapedCount,
+          logs: Array.isArray(statusData.logs) ? statusData.logs : latestJob.logs,
+        };
+
+        latestJob = {
+          ...latestJob,
+          progress: jobStatus.progress,
+          scrapedCount: jobStatus.scrapedCount,
+          logs: jobStatus.logs.map((log: { timestamp: string; level: LogLine['level']; message: string }, index: number) => ({
+            id: `srv_${index}`,
+            ...log,
+          })),
+        };
+        setCurrentJob(latestJob);
       }
 
-      // If backend didn't return places (e.g. simulated environment), read real dataset
-      if (!serverCallSuccess || finalResults.length === 0) {
-        // Parse actual real records from the hardware dataset
-        finalResults = REAL_SEED_PLACES;
-      }
+      if (cancelRef.current) return;
 
+      let finalResults: PlaceResult[] = [];
+      if (startData.started) {
+        const resultsResponse = await fetch('/api/scrape/results');
+        const resultsData = await resultsResponse.json();
+        if (!resultsResponse.ok) {
+          throw new Error(resultsData.message || `Could not load scraper results (${resultsResponse.status}).`);
+        }
+        finalResults = Array.isArray(resultsData.places) ? resultsData.places : [];
+      }
       setPlaces(finalResults);
 
-      const completedJob: ScrapingJob = {
-        ...newJob,
-        status: 'completed',
-        progress: 100,
+      const succeeded = jobStatus.exitCode === 0;
+      const completionLog: LogLine = {
+        id: 'log_done',
+        timestamp: new Date().toLocaleTimeString(),
+        level: succeeded ? 'success' : 'error',
+        message: succeeded
+          ? `[COMPLETED] Scraper finished. Loaded ${finalResults.length} places into Excel view.`
+          : `[FAILED] Scraper exited with code ${jobStatus.exitCode ?? 'unknown'}. Loaded ${finalResults.length} available places.`,
+      };
+      const finishedJob: ScrapingJob = {
+        ...latestJob,
+        status: succeeded ? 'completed' : 'failed',
+        progress: succeeded ? 100 : latestJob.progress,
         scrapedCount: finalResults.length,
         emailsFoundCount: finalResults.filter(p => !!p.email).length,
         results: finalResults,
-        logs: [
-          ...newJob.logs,
-          {
-            id: `log_done`,
-            timestamp: new Date().toLocaleTimeString(),
-            level: 'success',
-            message: `[COMPLETED] Scraper finished writing to JSON file. Loaded ${finalResults.length} real places into Excel view.`,
-          }
-        ]
+        logs: [...latestJob.logs, completionLog],
+        error: succeeded ? undefined : `Scraper exited with code ${jobStatus.exitCode ?? 'unknown'}.`,
       };
 
-      setCurrentJob(completedJob);
-      setJobsHistory(prev => [completedJob, ...prev]);
+      setCurrentJob(finishedJob);
+      setJobsHistory(prev => [finishedJob, ...prev]);
 
-      if (user) {
+      if (succeeded && user) {
         setUser(prev => prev ? ({
           ...prev,
           totalPlacesScraped: prev.totalPlacesScraped + finalResults.length,
         }) : null);
       }
 
-      showToast(`Scrape finished! Loaded ${finalResults.length} places from actual JSON file.`, 'success');
+      if (succeeded) {
+        showToast(
+          finalResults.length > 0
+            ? `Scrape finished! Loaded ${finalResults.length} places.`
+            : 'Scrape finished with no places found.',
+          'success'
+        );
+      } else {
+        showToast(`Scraper failed. Loaded ${finalResults.length} available places.`, 'error');
+      }
       setActiveTab('spreadsheet');
-    } catch (err: any) {
-      showToast(`Scraper error: ${err.message}`, 'error');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const failedJob: ScrapingJob = {
+        ...newJob,
+        status: 'failed',
+        error: message,
+        logs: [...newJob.logs, {
+          id: 'log_error',
+          timestamp: new Date().toLocaleTimeString(),
+          level: 'error',
+          message: `[FAILED] ${message}`,
+        }],
+      };
+      setCurrentJob(failedJob);
+      setJobsHistory(prev => [failedJob, ...prev]);
+      showToast(`Scraper error: ${message}`, 'error');
     } finally {
       setIsScraping(false);
     }
@@ -601,6 +660,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cancelScraping = () => {
     cancelRef.current = true;
     setIsScraping(false);
+    fetch('/api/scrape/cancel', { method: 'POST' }).catch(err => {
+      const message = err instanceof Error ? err.message : String(err);
+      showToast(`Could not stop scraper: ${message}`, 'error');
+    });
     showToast('Sent termination signal to background process.', 'info');
   };
 

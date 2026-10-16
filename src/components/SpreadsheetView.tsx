@@ -491,8 +491,14 @@ export const SpreadsheetView: React.FC = () => {
                   <td colSpan={12} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <FileSpreadsheet className="w-10 h-10 text-slate-600" />
-                      <p className="text-base font-semibold">No places found matching your filters</p>
-                      <p className="text-sm text-slate-500">Run a search from the configurator or click "Reload Output" above.</p>
+                      <p className="text-base font-semibold">
+                        {places.length === 0 ? 'No scrape results available' : 'No places found matching your filters'}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {places.length === 0
+                          ? 'Run the scraper to populate this sheet, or reload output from disk.'
+                          : 'Try changing your filters or search term.'}
+                      </p>
                     </div>
                   </td>
                 </tr>

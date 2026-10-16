@@ -129,8 +129,11 @@ function readLatestOutputPlaces(preferredFile?: string): { filePath: string; pla
 
         const content = fs.readFileSync(filePath, 'utf-8');
         const places = parseScraperJsonOutput(content);
+        placesCache.set(filePath, { mtime: stat.mtimeMs, places });
         if (places && places.length > 0) {
-          placesCache.set(filePath, { mtime: stat.mtimeMs, places });
+          return { filePath, places };
+        }
+        if (filePath === preferredFile) {
           return { filePath, places };
         }
       } catch (err: any) {
@@ -145,7 +148,7 @@ function readLatestOutputPlaces(preferredFile?: string): { filePath: string; pla
  * API: Read results directly from disk (fast cached read)
  */
 app.get('/api/scrape/results', (req, res) => {
-  const { filePath, places } = readLatestOutputPlaces();
+  const { filePath, places } = readLatestOutputPlaces(currentJobState.outputFile || undefined);
 
   if (places.length > 0) {
     return res.json({
@@ -157,8 +160,10 @@ app.get('/api/scrape/results', (req, res) => {
   }
 
   return res.json({
-    success: false,
-    message: 'No results file found in gmaps-output yet.',
+    success: Boolean(filePath),
+    message: filePath ? 'No places found in scraper output.' : 'No results file found in gmaps-output yet.',
+    filePath,
+    total: 0,
     places: [],
   });
 });
@@ -273,6 +278,8 @@ app.post('/api/scrape/run', async (req, res) => {
     addLog('info', `[EXEC] Running: ${path.basename(binaryPath)} ${args.join(' ')}`);
 
     try {
+      fs.writeFileSync(outputFilePath, '', 'utf-8');
+      placesCache.delete(outputFilePath);
       const child = spawn(binaryPath, args, {
         cwd: process.cwd(),
         env: { ...process.env, DISPLAY: process.env.DISPLAY || ':99' },
@@ -295,15 +302,20 @@ app.post('/api/scrape/run', async (req, res) => {
 
       child.on('error', err => {
         addLog('error', `Process spawn error: ${err.message}`);
+        currentJobState.exitCode = -1;
         currentJobState.isRunning = false;
         activeScraperProcess = null;
       });
 
       child.on('close', code => {
-        currentJobState.exitCode = code;
+        currentJobState.exitCode = code ?? -1;
         currentJobState.isRunning = false;
         activeScraperProcess = null;
-        addLog('success', `Scraper finished with exit code ${code}`);
+        placesCache.delete(outputFilePath);
+        const { places } = readLatestOutputPlaces(outputFilePath);
+        currentJobState.scrapedCount = places.length;
+        if (code === 0) currentJobState.progress = 100;
+        addLog(code === 0 ? 'success' : 'error', `Scraper finished with exit code ${code ?? 'unknown'}`);
       });
 
       // Quick 200ms grace period to check if binary initialized or output was immediate
@@ -311,30 +323,37 @@ app.post('/api/scrape/run', async (req, res) => {
 
     } catch (err: any) {
       addLog('error', `Failed to execute binary: ${err.message}`);
+      currentJobState.exitCode = -1;
       currentJobState.isRunning = false;
       activeScraperProcess = null;
     }
   } else {
-    addLog('info', `[STANDBY] Binary running in external background or using output data from ${path.basename(outputFilePath)}.`);
+    addLog('error', `[ERROR] Scraper binary not found: ${path.basename(outputFilePath)} cannot be generated.`);
+    currentJobState.exitCode = -1;
     currentJobState.isRunning = false;
   }
 
   // Read latest results immediately (fast cached)
-  const { places } = readLatestOutputPlaces(outputFilePath);
+  const places = binaryPath ? readLatestOutputPlaces(outputFilePath).places : [];
   currentJobState.scrapedCount = places.length;
-  if (!activeScraperProcess) {
+  if (!activeScraperProcess && currentJobState.exitCode === 0) {
     currentJobState.progress = 100;
   }
 
-  addLog('success', `[READY] Loaded ${places.length} places from ${path.basename(outputFilePath)}`);
+  if (binaryPath) {
+    addLog('info', '[READY] Scraper launched; waiting for it to finish before loading results.');
+  }
 
   return res.json({
     success: true,
     jobId,
     isRunning: currentJobState.isRunning,
     total: places.length,
-    places,
+    places: binaryPath ? places : [],
     logs: currentJobState.logs,
+    progress: currentJobState.progress,
+    exitCode: currentJobState.exitCode,
+    started: Boolean(binaryPath),
   });
 });
 
