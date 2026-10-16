@@ -18,8 +18,8 @@ interface AppContextType {
   updateFlag: <K extends keyof ScraperFlags>(key: K, value: ScraperFlags[K]) => void;
   resetFlags: () => void;
   
-  activeTab: 'builder' | 'spreadsheet' | 'terminal' | 'jobs' | 'docker';
-  setActiveTab: (tab: 'builder' | 'spreadsheet' | 'terminal' | 'jobs' | 'docker') => void;
+  activeTab: 'builder' | 'spreadsheet' | 'jobs';
+  setActiveTab: (tab: 'builder' | 'spreadsheet' | 'jobs') => void;
   
   currentJob: ScrapingJob | null;
   jobsHistory: ScrapingJob[];
@@ -44,8 +44,6 @@ interface AppContextType {
   toast: { message: string; type: 'success' | 'error' | 'info' } | null;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   
-  engineMode: 'binary' | 'google_api';
-  setEngineMode: (mode: 'binary' | 'google_api') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -277,10 +275,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [flags, setFlags] = useState<ScraperFlags>(() => {
     const saved = localStorage.getItem('mapscraper_flags');
-    return saved ? JSON.parse(saved) : DEFAULT_FLAGS;
+    if (!saved) return DEFAULT_FLAGS;
+    const savedFlags = JSON.parse(saved) as ScraperFlags;
+    return savedFlags.depth === 2
+      ? { ...savedFlags, depth: DEFAULT_FLAGS.depth }
+      : savedFlags;
   });
 
-  const [activeTab, setActiveTab] = useState<'builder' | 'spreadsheet' | 'terminal' | 'jobs' | 'docker'>('builder');
+  const [activeTab, setActiveTab] = useState<'builder' | 'spreadsheet' | 'jobs'>('builder');
   
   const [places, setPlaces] = useState<PlaceResult[]>(() => {
     const saved = localStorage.getItem('mapscraper_places');
@@ -304,7 +306,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const [engineMode, setEngineMode] = useState<'binary' | 'google_api'>('binary');
 
   const sharedAppUrl = typeof window !== 'undefined'
     ? `${window.location.origin}`
@@ -466,7 +467,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   /**
-   * Executes the scraper command in the background with -json flag
+   * Starts the scraper and loads its results when it finishes.
    */
   const startScraping = async () => {
     if (!user) {
@@ -511,7 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: 'log_1',
           timestamp: new Date().toLocaleTimeString(),
           level: 'info',
-          message: `[BACKGROUND RUNNER] Command dispatched in background with -json flag enforced.`,
+          message: 'Scraping started.',
         },
         {
           id: 'log_2',
@@ -524,8 +525,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setCurrentJob(newJob);
-    // Don't force switch to terminal on front page, stay smooth or switch on completion
-    showToast('Maps scraper running in the background...', 'info');
+    showToast('Scraping started.', 'info');
 
     try {
       const startResponse = await fetch('/api/scrape/run', {
@@ -664,7 +664,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const message = err instanceof Error ? err.message : String(err);
       showToast(`Could not stop scraper: ${message}`, 'error');
     });
-    showToast('Sent termination signal to background process.', 'info');
+    showToast('Scraper stop requested.', 'info');
   };
 
   return (
@@ -703,8 +703,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sharedAppUrl,
         toast,
         showToast,
-        engineMode,
-        setEngineMode,
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { PlaceDetailModal } from './PlaceDetailModal';
 import { PlaceResult } from '../types/scraper';
 import { copyPlacesToClipboard, exportToCsv, exportToExcel, exportToJson } from '../utils/excelExporter';
 import { getGoogleMapsUrl } from '../utils/mapUrl';
@@ -180,11 +181,6 @@ export const SpreadsheetView: React.FC = () => {
   };
 
   // Metrics
-  const emailCount = places.filter(p => !!p.email).length;
-  const avgRating = places.length > 0 
-    ? (places.reduce((acc, p) => acc + (p.rating || 0), 0) / places.length).toFixed(1) 
-    : '0.0';
-
   const renderSortIndicator = (field: SortField) => {
     if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />;
@@ -235,16 +231,6 @@ export const SpreadsheetView: React.FC = () => {
             <div className="px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-2">
               <span className="text-slate-400">Total Places:</span>
               <span className="font-bold font-mono text-slate-100 text-base">{places.length}</span>
-            </div>
-            <div className="px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
-              <Mail className="w-4 h-4 text-amber-400" />
-              <span className="text-amber-300 font-medium">Emails:</span>
-              <span className="font-bold font-mono text-amber-300 text-base">{emailCount}</span>
-            </div>
-            <div className="px-3.5 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center gap-2">
-              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span className="text-blue-300 font-medium">Avg Rating:</span>
-              <span className="font-bold font-mono text-blue-300 text-base">{avgRating}★</span>
             </div>
           </div>
         </div>
@@ -366,7 +352,6 @@ export const SpreadsheetView: React.FC = () => {
                 <th className="px-4 py-2 border-r border-slate-800">G</th>
                 <th className="px-4 py-2 border-r border-slate-800">H</th>
                 <th className="px-4 py-2 border-r border-slate-800">I</th>
-                <th className="px-4 py-2 text-center">J</th>
               </tr>
 
               {/* Clickable Column Sort Headers (Bigger Text) */}
@@ -386,6 +371,17 @@ export const SpreadsheetView: React.FC = () => {
                   <div className="flex items-center justify-between gap-2">
                     <span>Place Name</span>
                     {renderSortIndicator('title')}
+                  </div>
+                </th>
+
+                {/* Address */}
+                <th
+                  onClick={() => handleSort('address')}
+                  className="px-4 py-3.5 border-r border-slate-800 cursor-pointer hover:bg-slate-800/70 transition-colors group select-none min-w-[260px]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Address</span>
+                    {renderSortIndicator('address')}
                   </div>
                 </th>
 
@@ -420,14 +416,6 @@ export const SpreadsheetView: React.FC = () => {
                     <span>Reviews</span>
                     {renderSortIndicator('reviews')}
                   </div>
-                </th>
-
-                {/* Google Map Location */}
-                <th className="px-4 py-3.5 border-r border-slate-800 text-center select-none min-w-[150px]">
-                  <span className="flex items-center justify-center gap-1.5 text-sky-400 font-bold">
-                    <MapPin className="w-4 h-4 text-rose-400" />
-                    Google Map
-                  </span>
                 </th>
 
                 {/* Email Address */}
@@ -466,17 +454,6 @@ export const SpreadsheetView: React.FC = () => {
                   </div>
                 </th>
 
-                {/* Address */}
-                <th
-                  onClick={() => handleSort('address')}
-                  className="px-4 py-3.5 border-r border-slate-800 cursor-pointer hover:bg-slate-800/70 transition-colors group select-none min-w-[260px]"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span>Address</span>
-                    {renderSortIndicator('address')}
-                  </div>
-                </th>
-
                 {/* Action View */}
                 <th className="px-4 py-3.5 text-center font-bold min-w-[90px]">
                   Details
@@ -488,7 +465,7 @@ export const SpreadsheetView: React.FC = () => {
             <tbody className="divide-y divide-slate-800/70">
               {filteredPlaces.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-16 text-center text-slate-400">
+                  <td colSpan={11} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <FileSpreadsheet className="w-10 h-10 text-slate-600" />
                       <p className="text-base font-semibold">
@@ -575,6 +552,22 @@ export const SpreadsheetView: React.FC = () => {
                         </div>
                       </td>
 
+                      {/* Address */}
+                      <td className="px-4 py-3.5 border-r border-slate-800/60 text-slate-300">
+                        <a
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-2 truncate max-w-[280px] hover:text-sky-300 transition-colors group cursor-pointer"
+                          title={`Click to open address on Google Maps: ${place.address}`}
+                        >
+                          <MapPin className="w-4 h-4 text-rose-400/80 group-hover:text-rose-400 shrink-0 transition-colors" />
+                          <span className="truncate text-sm group-hover:underline decoration-sky-400/60 underline-offset-2">{place.address}</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 group-hover:text-sky-400 shrink-0 transition-opacity" />
+                        </a>
+                      </td>
+
                       {/* Category */}
                       <td className="px-4 py-3.5 border-r border-slate-800/60 text-slate-300">
                         <span className="px-3 py-1 rounded-md text-sm font-semibold bg-slate-800 text-slate-200 border border-slate-700 whitespace-nowrap">
@@ -593,22 +586,6 @@ export const SpreadsheetView: React.FC = () => {
                       {/* Reviews */}
                       <td className="px-4 py-3.5 border-r border-slate-800/60 font-mono text-base text-slate-300">
                         {place.reviews?.toLocaleString()}
-                      </td>
-
-                      {/* Google Map Direct Link Button */}
-                      <td className="px-4 py-3.5 border-r border-slate-800/60 text-center whitespace-nowrap">
-                        <a
-                          href={mapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-600/25 hover:shadow-blue-500/40 hover:scale-[1.03] active:scale-[0.98] transition-all group cursor-pointer"
-                          title={`Open ${place.title} on Google Maps in a new tab`}
-                        >
-                          <MapPin className="w-3.5 h-3.5 text-rose-300 group-hover:animate-pulse shrink-0" />
-                          <span>View Map</span>
-                          <ExternalLink className="w-3.5 h-3.5 text-blue-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
-                        </a>
                       </td>
 
                       {/* Email */}
@@ -661,22 +638,6 @@ export const SpreadsheetView: React.FC = () => {
                         ) : (
                           <span className="text-slate-600 font-mono text-sm">—</span>
                         )}
-                      </td>
-
-                      {/* Address with Clickable Google Maps Action */}
-                      <td className="px-4 py-3.5 border-r border-slate-800/60 text-slate-300">
-                        <a
-                          href={mapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="flex items-center gap-2 truncate max-w-[280px] hover:text-sky-300 transition-colors group cursor-pointer"
-                          title={`Click to open address on Google Maps: ${place.address}`}
-                        >
-                          <MapPin className="w-4 h-4 text-rose-400/80 group-hover:text-rose-400 shrink-0 transition-colors" />
-                          <span className="truncate text-sm group-hover:underline decoration-sky-400/60 underline-offset-2">{place.address}</span>
-                          <ExternalLink className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 group-hover:text-sky-400 shrink-0 transition-opacity" />
-                        </a>
                       </td>
 
                       {/* Details Button */}
@@ -749,6 +710,8 @@ export const SpreadsheetView: React.FC = () => {
           )}
         </div>
       </div>
+
+      <PlaceDetailModal places={filteredPlaces} />
     </div>
   );
 };

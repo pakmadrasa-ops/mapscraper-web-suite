@@ -7,20 +7,11 @@ import {
   RotateCcw,
   Sliders,
   Mail,
-  Zap,
-  Globe,
-  Cpu,
-  Shield,
-  Cloud,
   FileText,
   ChevronDown,
   ChevronUp,
   Coins,
-  Sparkles,
-  Info,
   RefreshCw,
-  FolderOpen,
-  CheckCircle2,
   Download
 } from 'lucide-react';
 
@@ -30,12 +21,11 @@ export const ScraperConfigForm: React.FC = () => {
     updateFlag,
     resetFlags,
     startScraping,
+    cancelScraping,
     isScraping,
     tokens,
     setIsTokenModalOpen,
     showToast,
-    engineMode,
-    setEngineMode,
     syncFromOutputFile
   } = useApp();
 
@@ -90,39 +80,13 @@ export const ScraperConfigForm: React.FC = () => {
               </span>
             </h1>
             <p className="text-base text-slate-300 mt-1">
-              Select search criteria with interactive map and GUI flags. Scraper executes in the background and saves directly to <span className="text-blue-300 font-mono font-semibold">gmaps-output/</span>.
+              Set your search criteria and run a scrape.
             </p>
           </div>
         </div>
-
-        {/* Engine switcher toggle */}
-        <div className="flex items-center bg-slate-950 p-1.5 rounded-xl border border-slate-800 text-sm">
-          <button
-            onClick={() => setEngineMode('binary')}
-            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-              engineMode === 'binary'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Cpu className="w-4 h-4" />
-            Binary Scraper
-          </button>
-          <button
-            onClick={() => setEngineMode('google_api')}
-            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-              engineMode === 'google_api'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            Google Places API
-          </button>
-        </div>
       </div>
 
-      {/* Main Grid: Left Form Controls, Right Background Status & Launch Panel */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Form (7 cols) */}
@@ -151,6 +115,34 @@ export const ScraperConfigForm: React.FC = () => {
               placeholder="Enter search queries (one per line, e.g.):&#10;Hardware stores in Lahore&#10;Ali and Brothers Sanitary&#10;Lasani Hardware Store"
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-base font-mono text-slate-200 focus:outline-none focus:border-blue-500 transition-colors leading-relaxed"
             />
+
+            <button
+              type="button"
+              disabled={isScraping}
+              onClick={startScraping}
+              className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-base font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isScraping ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Scraping...</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5 fill-white" />
+                  <span>Run Scraper Now</span>
+                </>
+              )}
+            </button>
+            {isScraping && (
+              <button
+                type="button"
+                onClick={cancelScraping}
+                className="w-full py-2 text-sm font-semibold text-rose-300 hover:text-rose-200 rounded-xl border border-rose-500/30 hover:bg-rose-500/10 transition-colors"
+              >
+                Stop scraping
+              </button>
+            )}
 
             {/* Quick Query Templates with Clear Font */}
             <div className="flex flex-wrap items-center gap-2.5 pt-1 text-sm">
@@ -206,7 +198,7 @@ export const ScraperConfigForm: React.FC = () => {
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <label className="text-base font-semibold text-slate-200">
-                          Scroll Depth (<code className="text-purple-400 font-mono text-sm">-depth</code>)
+                          Scroll Depth
                         </label>
                         <span className="text-sm font-mono font-bold text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded">
                           Level {flags.depth}
@@ -215,19 +207,19 @@ export const ScraperConfigForm: React.FC = () => {
                       <input
                         type="range"
                         min={1}
-                        max={30}
+                        max={50}
                         step={1}
                         value={flags.depth}
                         onChange={e => updateFlag('depth', parseInt(e.target.value))}
                         className="w-full accent-purple-500 cursor-pointer h-2.5 bg-slate-800 rounded-lg"
                       />
-                      <span className="text-xs text-slate-400 mt-1.5 block">Scroll pages in search results pane (default 10)</span>
+                      <span className="text-xs text-slate-400 mt-1.5 block">More scroll depth can return more places (default 5; up to 50)</span>
                     </div>
 
                     {/* Exit on Inactivity */}
                     <div>
                       <label className="text-base font-semibold text-slate-200 block mb-2">
-                        Exit on Inactivity (<code className="text-purple-400 font-mono text-sm">-exit-on-inactivity</code>)
+                        Exit on Inactivity
                       </label>
                       <select
                         value={flags.exitOnInactivity}
@@ -247,7 +239,7 @@ export const ScraperConfigForm: React.FC = () => {
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <label className="text-base font-semibold text-slate-200">
-                          Worker Concurrency (<code className="text-purple-400 font-mono text-sm">-c</code>)
+                          Worker Concurrency
                         </label>
                         <span className="text-sm font-mono font-bold text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded">
                           {flags.c} workers
@@ -268,7 +260,7 @@ export const ScraperConfigForm: React.FC = () => {
                     {/* Language */}
                     <div>
                       <label className="text-base font-semibold text-slate-200 block mb-2">
-                        Maps Language (<code className="text-purple-400 font-mono text-sm">-lang</code>)
+                        Maps Language
                       </label>
                       <select
                         value={flags.lang || 'en'}
@@ -288,7 +280,7 @@ export const ScraperConfigForm: React.FC = () => {
               )}
             </div>
 
-            {/* Data Extraction Options (Email, Fast Mode, Extra Reviews) */}
+            {/* Data Extraction Options */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
               <button
                 type="button"
@@ -316,7 +308,7 @@ export const ScraperConfigForm: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <span className="text-base font-bold text-slate-200">
-                            Extract Emails (<code className="text-amber-400 font-mono text-sm">-email</code>)
+                            Extract Emails
                           </span>
                           <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
                             Recommended
@@ -338,7 +330,7 @@ export const ScraperConfigForm: React.FC = () => {
                       />
                       <div className="flex-1">
                         <span className="text-base font-bold text-slate-200">
-                          Collect Extra Reviews (<code className="text-blue-400 font-mono text-sm">-extra-reviews</code>)
+                          Collect Extra Reviews
                         </span>
                         <p className="text-sm text-slate-400 mt-1">
                           Collects detailed user feedback, star ratings, and reviewers' metadata.
@@ -346,23 +338,6 @@ export const ScraperConfigForm: React.FC = () => {
                       </div>
                     </label>
 
-                    {/* Fast Mode (Always Active - Non-selectable per user requirement) */}
-                    <div className="flex items-start gap-3.5 p-3.5 rounded-xl bg-slate-950/80 border border-cyan-500/30">
-                      <Zap className="w-5 h-5 mt-0.5 text-cyan-400 shrink-0" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-base font-bold text-slate-200">
-                            Fast Mode (<code className="text-cyan-400 font-mono text-sm">-fast-mode</code>)
-                          </span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                            ⚡ Always Active
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-400 mt-1">
-                          Enabled permanently for all scrape tasks to deliver high-speed background throughput.
-                        </p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
@@ -372,7 +347,7 @@ export const ScraperConfigForm: React.FC = () => {
 
         </div>
 
-        {/* Right Sidebar: Token Cost, Background Status & Silent Execution Action (5 cols) */}
+        {/* Right Sidebar */}
         <div className="lg:col-span-5 space-y-6">
           
           {/* Main Action Panel */}
@@ -411,55 +386,7 @@ export const ScraperConfigForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Background Runner Engine Status */}
-            <div className="p-4.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-3.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
-                  <span className="text-sm font-bold uppercase tracking-wider text-slate-200">Background Engine Status</span>
-                </div>
-                <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                  Ready
-                </span>
-              </div>
-
-              <div className="text-sm text-slate-300 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Output Format:</span>
-                  <span className="text-emerald-400 font-mono font-semibold">JSON lines (-json flag)</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Destination:</span>
-                  <span className="text-slate-200 font-mono text-xs">{flags.results || 'gmaps-output/results.json'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Process Mode:</span>
-                  <span className="text-blue-400 font-semibold">Silent Background Execution</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Launch Button with Larger Font & High Contrast */}
             <div className="space-y-3 pt-1">
-              <button
-                type="button"
-                disabled={isScraping}
-                onClick={startScraping}
-                className="w-full py-4.5 px-6 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-lg font-bold rounded-xl transition-all shadow-xl shadow-blue-500/25 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
-              >
-                {isScraping ? (
-                  <>
-                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>Scraper Running in Background...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-6 h-6 fill-white group-hover:scale-110 transition-transform" />
-                    <span>Run Scraper Now</span>
-                  </>
-                )}
-              </button>
-
               {/* Sync existing results button */}
               <button
                 type="button"
@@ -484,26 +411,6 @@ export const ScraperConfigForm: React.FC = () => {
               )}
             </div>
 
-          </div>
-
-          {/* Destination Settings */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-3">
-            <h3 className="text-base font-bold text-slate-100 flex items-center gap-2.5">
-              <FolderOpen className="w-5 h-5 text-blue-400" />
-              Output Destination File
-            </h3>
-            <div>
-              <label className="text-xs text-slate-400 block mb-1.5">File Path</label>
-              <input
-                type="text"
-                value={flags.results || 'gmaps-output/results.json'}
-                onChange={e => updateFlag('results', e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 text-sm rounded-xl px-4 py-2.5 text-slate-200 font-mono"
-              />
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              The scraper binary automatically writes each scraped place as JSON to this file in the background. The app loads and presents it in the Excel spreadsheet view automatically.
-            </p>
           </div>
 
         </div>

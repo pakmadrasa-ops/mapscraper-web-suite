@@ -214,7 +214,7 @@ app.post('/api/scrape/run', async (req, res) => {
 
   const { flags } = req.body;
   const rawInput = flags?.input || 'Hardware stores in Lahore';
-  const depth = flags?.depth || 2;
+  const depth = flags?.depth || 5;
   const exitOnInactivity = flags?.exitOnInactivity || '3m';
   const geo = flags?.geo || '31.4237,74.2136';
   const radius = flags?.radius || 10000;

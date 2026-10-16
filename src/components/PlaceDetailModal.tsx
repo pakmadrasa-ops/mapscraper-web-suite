@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { PlaceResult } from '../types/scraper';
 import { getGoogleMapsUrl } from '../utils/mapUrl';
 import {
   X,
+  ChevronLeft,
+  ChevronRight,
   MapPin,
   Star,
   Phone,
@@ -19,13 +22,16 @@ import {
   Calendar
 } from 'lucide-react';
 
-export const PlaceDetailModal: React.FC = () => {
+export const PlaceDetailModal: React.FC<{ places: PlaceResult[] }> = ({ places }) => {
   const { selectedPlace, setSelectedPlace, showToast } = useApp();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
 
   if (!selectedPlace) return null;
 
+  const selectedIndex = places.findIndex(place => place.id === selectedPlace.id);
+  const hasPrevious = selectedIndex > 0;
+  const hasNext = selectedIndex >= 0 && selectedIndex < places.length - 1;
   const mapUrl = getGoogleMapsUrl(selectedPlace);
 
   const copyToClipboard = (text: string, key: string) => {
@@ -62,6 +68,32 @@ export const PlaceDetailModal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => hasPrevious && setSelectedPlace(places[selectedIndex - 1])}
+                disabled={!hasPrevious}
+                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Previous place"
+                aria-label="Previous place"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-xs text-slate-400 tabular-nums whitespace-nowrap">
+                {selectedIndex >= 0 ? `${selectedIndex + 1} of ${places.length}` : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => hasNext && setSelectedPlace(places[selectedIndex + 1])}
+                disabled={!hasNext}
+                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Next place"
+                aria-label="Next place"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
             {/* Primary Google Maps Direct Link */}
             <a
               href={mapUrl}

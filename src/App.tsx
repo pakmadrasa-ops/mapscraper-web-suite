@@ -8,10 +8,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
 import { ScraperConfigForm } from './components/ScraperConfigForm';
 import { SpreadsheetView } from './components/SpreadsheetView';
-import { TerminalRunner } from './components/TerminalRunner';
 import { JobsHistoryTab } from './components/JobsHistoryTab';
-import { DockerTab } from './components/DockerTab';
-import { PlaceDetailModal } from './components/PlaceDetailModal';
 import { TokenPurchaseModal } from './components/TokenPurchaseModal';
 import { AuthModal } from './components/AuthModal';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
@@ -26,29 +23,15 @@ const MainContent: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'builder' && <ScraperConfigForm />}
         {activeTab === 'spreadsheet' && <SpreadsheetView />}
-        {activeTab === 'terminal' && <TerminalRunner />}
         {activeTab === 'jobs' && <JobsHistoryTab />}
-        {activeTab === 'docker' && <DockerTab />}
       </main>
 
       {/* Footer */}
       <footer className="w-full bg-slate-950 border-t border-slate-900 py-4 px-4 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>MapScraper Web Suite • Compatible with <code>google_maps_scraper-1.18.1-linux-amd64</code></span>
-          <div className="flex items-center gap-4 text-[11px] text-slate-400">
-            <span>Leaflet Spatial Coordinates</span>
-            <span>•</span>
-            <span>Excel Sheet Grid (.XLSX)</span>
-            <span>•</span>
-            <span>Credit Card / PayPal / JazzCash</span>
-            <span>•</span>
-            <span>Docker Ready</span>
-          </div>
-        </div>
+        <span>MapScraper Suite</span>
       </footer>
 
       {/* Modals & Drawers */}
-      <PlaceDetailModal />
       <TokenPurchaseModal />
       <AuthModal />
 

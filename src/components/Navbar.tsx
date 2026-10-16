@@ -4,9 +4,7 @@ import {
   MapPin,
   Sliders,
   FileSpreadsheet,
-  Terminal,
   History,
-  Server,
   Coins,
   Plus,
   User,
@@ -19,7 +17,6 @@ export const Navbar: React.FC = () => {
     activeTab,
     setActiveTab,
     places,
-    isScraping,
     tokens,
     user,
     setIsTokenModalOpen,
@@ -46,7 +43,7 @@ export const Navbar: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-mono hidden sm:block">
-              Binary CLI Web Wrapper & Lead Engine
+              Google Maps business data
             </p>
           </div>
         </div>
@@ -85,21 +82,6 @@ export const Navbar: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab('terminal')}
-            className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'terminal'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <Terminal className="w-4 h-4" />
-            <span>Terminal</span>
-            {isScraping && (
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            )}
-          </button>
-
-          <button
             onClick={() => setActiveTab('jobs')}
             className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
               activeTab === 'jobs'
@@ -111,17 +93,6 @@ export const Navbar: React.FC = () => {
             <span>History</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('docker')}
-            className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-              activeTab === 'docker'
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
-          >
-            <Server className="w-4 h-4" />
-            <span>Docker Hub</span>
-          </button>
         </nav>
 
         {/* Right: Tokens & User Profile */}
@@ -203,28 +174,12 @@ export const Navbar: React.FC = () => {
           <FileSpreadsheet className="w-3 h-3" /> Sheet ({places.length})
         </button>
         <button
-          onClick={() => setActiveTab('terminal')}
-          className={`px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 ${
-            activeTab === 'terminal' ? 'text-blue-400 font-bold' : 'text-slate-400'
-          }`}
-        >
-          <Terminal className="w-3 h-3" /> CLI {isScraping && '•'}
-        </button>
-        <button
           onClick={() => setActiveTab('jobs')}
           className={`px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 ${
             activeTab === 'jobs' ? 'text-blue-400 font-bold' : 'text-slate-400'
           }`}
         >
           <History className="w-3 h-3" /> Jobs
-        </button>
-        <button
-          onClick={() => setActiveTab('docker')}
-          className={`px-2 py-1 rounded text-[11px] font-medium flex items-center gap-1 ${
-            activeTab === 'docker' ? 'text-blue-400 font-bold' : 'text-slate-400'
-          }`}
-        >
-          <Server className="w-3 h-3" /> Docker
         </button>
       </div>
     </header>

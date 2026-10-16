@@ -6,7 +6,7 @@ export const DEFAULT_FLAGS: ScraperFlags = {
   results: 'gmaps-output/results.json',
   json: true,
   resume: false,
-  depth: 2,
+  depth: 5,
   exitOnInactivity: '3m',
   fastMode: true,
   geo: '31.5204,74.3587',

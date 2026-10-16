@@ -116,10 +116,6 @@ export const JobsHistoryTab: React.FC = () => {
                       Places: <strong className="text-slate-200">{job.scrapedCount}</strong>
                     </span>
                     <span>•</span>
-                    <span>
-                      Emails: <strong className="text-amber-400">{job.emailsFoundCount}</strong>
-                    </span>
-                    <span>•</span>
                     <span className="flex items-center gap-1 text-blue-400">
                       <Coins className="w-3.5 h-3.5" />
                       {job.tokensCost} tokens
