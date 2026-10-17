@@ -5,11 +5,6 @@ import {
   Sliders,
   FileSpreadsheet,
   History,
-  Coins,
-  Plus,
-  User,
-  LogOut,
-  LogIn
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -17,11 +12,6 @@ export const Navbar: React.FC = () => {
     activeTab,
     setActiveTab,
     places,
-    tokens,
-    user,
-    setIsTokenModalOpen,
-    setIsAuthModalOpen,
-    logout
   } = useApp();
 
   return (
@@ -36,7 +26,7 @@ export const Navbar: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm tracking-tight text-slate-100">
-                MapScraper <span className="text-blue-400">Suite</span>
+                Google Maps <span className="text-blue-400">Search Engine</span>
               </span>
               <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
                 v1.18.1
@@ -94,64 +84,6 @@ export const Navbar: React.FC = () => {
           </button>
 
         </nav>
-
-        {/* Right: Tokens & User Profile */}
-        <div className="flex items-center gap-3">
-          
-          {/* Token Balance Pill */}
-          <button
-            onClick={() => setIsTokenModalOpen(true)}
-            className="flex items-center gap-2.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800/80 border border-slate-800 rounded-xl transition-all shadow-sm group"
-            title="Refill tokens via Credit Card, PayPal, or JazzCash"
-          >
-            <div className="flex items-center gap-1.5 text-amber-400 font-bold font-mono text-sm">
-              <Coins className="w-4 h-4" />
-              <span>{tokens}</span>
-            </div>
-            <span className="text-xs text-slate-400 font-medium hidden sm:inline">tokens</span>
-            <span className="w-5 h-5 rounded-lg bg-blue-600 group-hover:bg-blue-500 text-white flex items-center justify-center transition-colors">
-              <Plus className="w-3.5 h-3.5" />
-            </span>
-          </button>
-
-          {/* User Profile / Auth */}
-          {user ? (
-            <div className="flex items-center gap-2 pl-1 border-l border-slate-800">
-              <div className="flex items-center gap-2">
-                <img
-                  src={user.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${user.name}`}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full border border-slate-700 object-cover"
-                />
-                <div className="hidden lg:block text-left">
-                  <div className="text-xs font-semibold text-slate-200 leading-tight truncate max-w-[110px]">
-                    {user.name}
-                  </div>
-                  <div className="text-[10px] text-blue-400 font-mono leading-tight">
-                    {user.plan} Account
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={logout}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
-                title="Sign Out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 shadow-sm"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In</span>
-            </button>
-          )}
-
-        </div>
 
       </div>
 

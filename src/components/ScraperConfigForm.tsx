@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { calculateTokenCost } from '../utils/commandGenerator';
 import { MapSelector } from './MapSelector';
 import {
   Play,
@@ -10,7 +9,6 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
-  Coins,
   RefreshCw,
   Download
 } from 'lucide-react';
@@ -23,8 +21,6 @@ export const ScraperConfigForm: React.FC = () => {
     startScraping,
     cancelScraping,
     isScraping,
-    tokens,
-    setIsTokenModalOpen,
     showToast,
     syncFromOutputFile
   } = useApp();
@@ -32,15 +28,8 @@ export const ScraperConfigForm: React.FC = () => {
   const [activeAccordion, setActiveAccordion] = useState<string>('location');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const tokenCost = calculateTokenCost(flags);
-
   const toggleAccordion = (name: string) => {
     setActiveAccordion(prev => (prev === name ? '' : name));
-  };
-
-  const handleSampleQueries = (sample: string) => {
-    updateFlag('input', sample);
-    showToast('Loaded sample query preset!', 'info');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,23 +63,22 @@ export const ScraperConfigForm: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-3">
-              Google Maps Scraper GUI
+              Google Maps Search Engine
               <span className="text-xs font-mono font-semibold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 v1.18.1 Linux-x86_64
               </span>
             </h1>
             <p className="text-base text-slate-300 mt-1">
-              Set your search criteria and run a scrape.
+              Search Google Maps and explore matching places.
             </p>
           </div>
         </div>
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         
-        {/* Left Form (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="space-y-6">
           
           {/* Target Queries Section */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
@@ -108,12 +96,19 @@ export const ScraperConfigForm: React.FC = () => {
               </label>
             </div>
 
-            <textarea
-              rows={4}
+            <input
+              type="search"
               value={flags.input}
               onChange={e => updateFlag('input', e.target.value)}
-              placeholder="Enter search queries (one per line, e.g.):&#10;Hardware stores in Lahore&#10;Ali and Brothers Sanitary&#10;Lasani Hardware Store"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-base font-mono text-slate-200 focus:outline-none focus:border-blue-500 transition-colors leading-relaxed"
+              onKeyDown={event => {
+                if (event.key === 'Enter' && !event.nativeEvent.isComposing && !isScraping) {
+                  event.preventDefault();
+                  void startScraping();
+                }
+              }}
+              aria-label="Search Google Maps"
+              placeholder="Search Google Maps, then press Enter"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-base font-mono text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
             />
 
             <button
@@ -130,7 +125,7 @@ export const ScraperConfigForm: React.FC = () => {
               ) : (
                 <>
                   <Play className="w-5 h-5 fill-white" />
-                  <span>Run Scraper Now</span>
+                  <span>Search Maps</span>
                 </>
               )}
             </button>
@@ -144,31 +139,6 @@ export const ScraperConfigForm: React.FC = () => {
               </button>
             )}
 
-            {/* Quick Query Templates with Clear Font */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-1 text-sm">
-              <span className="text-sm text-slate-400 font-medium">Quick Presets:</span>
-              <button
-                type="button"
-                onClick={() => handleSampleQueries('Hardware stores in Lahore\nElectric stores in Lahore\nSanitary stores in Lahore')}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-sm font-medium text-slate-200 border border-slate-700 transition-colors"
-              >
-                🛠️ Hardware & Sanitary Stores
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSampleQueries('Dentists in Gulberg Lahore\nDental clinics in DHA Lahore')}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-sm font-medium text-slate-200 border border-slate-700 transition-colors"
-              >
-                🦷 Dental Clinics
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSampleQueries('Software companies in Lahore\nIT companies in Gulberg Lahore')}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-sm font-medium text-slate-200 border border-slate-700 transition-colors"
-              >
-                💻 Software & IT Companies
-              </button>
-            </div>
           </div>
 
           {/* Interactive Map Component */}
@@ -193,7 +163,7 @@ export const ScraperConfigForm: React.FC = () => {
 
               {activeAccordion === 'crawl' && (
                 <div className="p-6 space-y-5 border-t border-slate-800 bg-slate-900/50">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     {/* Depth */}
                     <div>
                       <div className="flex justify-between items-center mb-2">
@@ -347,70 +317,19 @@ export const ScraperConfigForm: React.FC = () => {
 
         </div>
 
-        {/* Right Sidebar */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="space-y-6">
           
-          {/* Main Action Panel */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                <Coins className="w-5 h-5 text-amber-400" />
-                Query Token Estimation
-              </h2>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-400">Balance:</span>
-                <span className="text-lg font-bold text-amber-400 font-mono">{tokens} tokens</span>
-              </div>
-            </div>
-
-            {/* Token details */}
-            <div className="bg-slate-950/80 rounded-xl p-4 border border-slate-800 space-y-3 text-base">
-              <div className="flex justify-between text-slate-300">
-                <span>Targets:</span>
-                <span className="font-mono text-slate-100 font-semibold">{flags.input.split('\n').filter(Boolean).length || 1} queries</span>
-              </div>
-              <div className="flex justify-between text-slate-300">
-                <span>Scroll Multiplier:</span>
-                <span className="font-mono text-slate-100 font-semibold">Depth {flags.depth}</span>
-              </div>
-              {flags.email && (
-                <div className="flex justify-between text-amber-300 font-medium">
-                  <span>Website Email Extraction:</span>
-                  <span className="font-mono">+2 tokens/query</span>
-                </div>
-              )}
-              <div className="h-px bg-slate-800 my-1"></div>
-              <div className="flex justify-between text-lg font-bold text-slate-100">
-                <span>Total Token Cost:</span>
-                <span className="font-mono text-blue-400 text-xl">{tokenCost} tokens</span>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-1">
-              {/* Sync existing results button */}
-              <button
-                type="button"
-                onClick={handleSyncData}
-                disabled={isSyncing}
-                className="w-full py-3 px-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-base font-semibold rounded-xl transition-colors flex items-center justify-center gap-2.5"
-                title="Directly read and refresh the latest results from gmaps-output/results.json"
-              >
-                <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>Sync Latest Output from gmaps-output/</span>
-              </button>
-
-              {tokens < tokenCost && (
-                <button
-                  type="button"
-                  onClick={() => setIsTokenModalOpen(true)}
-                  className="w-full py-3 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-base font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
-                >
-                  <Coins className="w-5 h-5" />
-                  Top Up Tokens (Credit Card, PayPal, JazzCash)
-                </button>
-              )}
-            </div>
-
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+            <button
+              type="button"
+              onClick={handleSyncData}
+              disabled={isSyncing}
+              className="w-full py-3 px-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-base font-semibold rounded-xl transition-colors flex items-center justify-center gap-2.5"
+              title="Directly read and refresh the latest results from gmaps-output/results.json"
+            >
+              <RefreshCw className={`w-4 h-4 text-emerald-400 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>Sync Latest Output from gmaps-output/</span>
+            </button>
           </div>
 
         </div>

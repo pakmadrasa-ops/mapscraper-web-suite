@@ -187,7 +187,7 @@ export const PlaceDetailModal: React.FC<{ places: PlaceResult[] }> = ({ places }
           </div>
 
           {/* Contact Information Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 gap-3.5">
             
             {/* Phone */}
             <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">

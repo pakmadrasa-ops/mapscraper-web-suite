@@ -44,7 +44,7 @@ export const ShareModal: React.FC = () => {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                Share MapScraper Suite
+                Share Google Maps Search Engine
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
                   Online & Public
                 </span>

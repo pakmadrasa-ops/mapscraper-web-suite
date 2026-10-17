@@ -351,7 +351,7 @@ export const MapSelector: React.FC = () => {
       </div>
 
       {/* Synchronized Sliders & Manual Inputs */}
-      <div className="p-4 bg-slate-950 border-t border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="p-4 bg-slate-950 border-t border-slate-800 grid grid-cols-1 gap-4">
         {/* Geo text box */}
         <div>
           <label className="text-sm font-semibold text-slate-200 block mb-1.5">

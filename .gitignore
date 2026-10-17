@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+/webdata/auth-users.json
+/webdata/auth-balances.json

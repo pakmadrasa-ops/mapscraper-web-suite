@@ -115,7 +115,6 @@ export interface PlaceResult {
 
 export interface ScrapingJob {
   id: string;
-  userId: string;
   name: string;
   timestamp: string;
   status: 'idle' | 'running' | 'completed' | 'failed' | 'paused';
@@ -125,7 +124,6 @@ export interface ScrapingJob {
   totalEstimated: number;
   scrapedCount: number;
   emailsFoundCount: number;
-  tokensCost: number;
   logs: LogLine[];
   results: PlaceResult[];
   error?: string;
@@ -136,41 +134,4 @@ export interface LogLine {
   timestamp: string;
   level: 'info' | 'warn' | 'error' | 'success' | 'debug';
   message: string;
-}
-
-export interface UserAccount {
-  id: string;
-  email: string;
-  name: string;
-  avatar?: string;
-  tokens: number;
-  plan: 'Starter' | 'Pro' | 'Enterprise';
-  createdAt: string;
-  totalJobsRun: number;
-  totalPlacesScraped: number;
-  provider: 'local' | 'google' | 'github';
-}
-
-export interface TokenPackage {
-  id: string;
-  name: string;
-  tokens: number;
-  priceUSD: number;
-  pricePKR: number;
-  popular?: boolean;
-  discountBadge?: string;
-  features: string[];
-}
-
-export interface PaymentTransaction {
-  id: string;
-  userId: string;
-  packageId: string;
-  tokens: number;
-  amountUSD: number;
-  amountPKR: number;
-  paymentMethod: 'credit_card' | 'paypal' | 'jazzcash';
-  accountReference: string;
-  status: 'completed' | 'pending';
-  timestamp: string;
 }

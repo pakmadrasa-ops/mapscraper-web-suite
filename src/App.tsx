@@ -9,8 +9,6 @@ import { Navbar } from './components/Navbar';
 import { ScraperConfigForm } from './components/ScraperConfigForm';
 import { SpreadsheetView } from './components/SpreadsheetView';
 import { JobsHistoryTab } from './components/JobsHistoryTab';
-import { TokenPurchaseModal } from './components/TokenPurchaseModal';
-import { AuthModal } from './components/AuthModal';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 const MainContent: React.FC = () => {
@@ -28,12 +26,8 @@ const MainContent: React.FC = () => {
 
       {/* Footer */}
       <footer className="w-full bg-slate-950 border-t border-slate-900 py-4 px-4 text-center text-xs text-slate-500">
-        <span>MapScraper Suite</span>
+        <span>Google Maps Search Engine</span>
       </footer>
-
-      {/* Modals & Drawers */}
-      <TokenPurchaseModal />
-      <AuthModal />
 
       {/* Toast Notification */}
       {toast && (

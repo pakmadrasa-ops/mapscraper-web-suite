@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quickstart script for MapScraper Docker Deployment
+# Quickstart script for Google Maps Search Engine
 set -euo pipefail
 
 echo "=========================================================="
