@@ -183,88 +183,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!startResponse.ok || !startData.success) {
         throw new Error(startData.message || `Scraper request failed (${startResponse.status}).`);
       }
-
-      const serverJobId = typeof startData.jobId === 'string' ? startData.jobId : newJob.id;
-      let latestJob: ScrapingJob = { ...newJob, id: serverJobId };
-      let jobStatus = {
-        isRunning: Boolean(startData.isRunning),
-        exitCode: startData.exitCode as number | null | undefined,
-        progress: typeof startData.progress === 'number' ? startData.progress : latestJob.progress,
-        scrapedCount: typeof startData.total === 'number' ? startData.total : latestJob.scrapedCount,
-        logs: Array.isArray(startData.logs) ? startData.logs : [],
-      };
-
-      while (jobStatus.isRunning) {
-        if (cancelRef.current) return;
-        await new Promise(resolve => window.setTimeout(resolve, 1000));
-        if (cancelRef.current) return;
-
-        const statusResponse = await fetch('/api/scrape/status');
-        const statusData = await statusResponse.json();
-        if (!statusResponse.ok) {
-          throw new Error(statusData.message || `Could not read scraper status (${statusResponse.status}).`);
-        }
-        if (statusData.id !== serverJobId) {
-          throw new Error('The scraper status no longer matches the job started by this request.');
-        }
-        jobStatus = {
-          isRunning: Boolean(statusData.isRunning),
-          exitCode: statusData.exitCode as number | null | undefined,
-          progress: typeof statusData.progress === 'number' ? statusData.progress : latestJob.progress,
-          scrapedCount: typeof statusData.scrapedCount === 'number' ? statusData.scrapedCount : latestJob.scrapedCount,
-          logs: Array.isArray(statusData.logs) ? statusData.logs : latestJob.logs,
-        };
-
-        latestJob = {
-          ...latestJob,
-          progress: jobStatus.progress,
-          scrapedCount: jobStatus.scrapedCount,
-          logs: jobStatus.logs.map((log: { timestamp: string; level: LogLine['level']; message: string }, index: number) => ({
-            id: `srv_${index}`,
-            ...log,
-          })),
-        };
-        setCurrentJob(latestJob);
-      }
-
       if (cancelRef.current) return;
 
-      const succeeded = jobStatus.exitCode === 0;
-
-      let finalResults: PlaceResult[] = [];
-      if (startData.started) {
-        const resultsResponse = await fetch('/api/scrape/results');
-        const resultsData = await resultsResponse.json();
-        if (!resultsResponse.ok) {
-          throw new Error(resultsData.message || `Could not load scraper results (${resultsResponse.status}).`);
-        }
-        finalResults = Array.isArray(resultsData.places) ? resultsData.places : [];
-      }
+      const serverJobId = typeof startData.jobId === 'string' ? startData.jobId : newJob.id;
+      const succeeded = startData.exitCode === 0;
+      const timedOut = startData.timedOut === true;
+      const finalResults: PlaceResult[] = Array.isArray(startData.places) ? startData.places : [];
+      const serverLogs = Array.isArray(startData.logs)
+        ? startData.logs.map((log: { timestamp: string; level: LogLine['level']; message: string }, index: number) => ({
+            id: `srv_${index}`,
+            ...log,
+          }))
+        : newJob.logs;
+      const completedJob: ScrapingJob = {
+        ...newJob,
+        id: serverJobId,
+        progress: typeof startData.progress === 'number' ? startData.progress : newJob.progress,
+        scrapedCount: finalResults.length,
+        logs: serverLogs,
+      };
       setPlaces(finalResults);
 
       const completionLog: LogLine = {
         id: 'log_done',
         timestamp: new Date().toLocaleTimeString(),
-        level: succeeded ? 'success' : 'error',
+        level: timedOut ? 'warn' : succeeded ? 'success' : 'error',
         message: succeeded
           ? `[COMPLETED] Scraper finished. Loaded ${finalResults.length} places into Excel view.`
-          : `[FAILED] Scraper exited with code ${jobStatus.exitCode ?? 'unknown'}. Loaded ${finalResults.length} available places.`,
+          : timedOut
+          ? `[PARTIAL] The scraper is still running. Loaded ${finalResults.length} places so far.`
+          : `[FAILED] Scraper exited with code ${startData.exitCode ?? 'unknown'}. Loaded ${finalResults.length} available places.`,
       };
       const finishedJob: ScrapingJob = {
-        ...latestJob,
-        status: succeeded ? 'completed' : 'failed',
-        progress: succeeded ? 100 : latestJob.progress,
+        ...completedJob,
+        status: timedOut ? 'partial' : succeeded ? 'completed' : 'failed',
+        progress: succeeded ? 100 : completedJob.progress,
         scrapedCount: finalResults.length,
         emailsFoundCount: finalResults.filter(p => !!p.email).length,
         results: finalResults,
-        logs: [...latestJob.logs, completionLog],
-        error: succeeded ? undefined : `Scraper exited with code ${jobStatus.exitCode ?? 'unknown'}.`,
+        logs: [...completedJob.logs, completionLog],
+        error: succeeded || timedOut ? undefined : `Scraper exited with code ${startData.exitCode ?? 'unknown'}.`,
       };
 
       setCurrentJob(finishedJob);
       setJobsHistory(prev => [finishedJob, ...prev]);
 
-      if (succeeded) {
+      if (timedOut) {
+        showToast(
+          `Showing ${finalResults.length} places so far. The scraper is still running; sync results later to load more.`,
+          'info'
+        );
+      } else if (succeeded) {
         showToast(
           finalResults.length > 0
             ? `Scrape finished! Loaded ${finalResults.length} places.`
@@ -274,7 +243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         showToast(`Scraper failed. Loaded ${finalResults.length} available places.`, 'error');
       }
-      if (succeeded) setActiveTab('spreadsheet');
+      if (succeeded || timedOut || finalResults.length > 0) setActiveTab('spreadsheet');
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const failedJob: ScrapingJob = {

@@ -19,6 +19,8 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      //allowedHosts: ['map.rizvi.com'], // The leading dot allows all subdomains (e.g., sub.rizvi.com)
+      allowedHosts: true,
     },
     preview: {
       port: 3000,

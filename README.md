@@ -16,7 +16,9 @@ Search Google Maps places, configure search areas, and explore results in a spre
 2. Run the app:
    `npm run dev`
 
-The search interface is available without an account or sign-in. Searches and job history are held in the running app; run a single server instance.
+The search interface is available without an account or sign-in. Searches and job history are held in the running app; run a single server instance. A search request waits up to 75 seconds for the scraper. If the scraper is still running, the server returns the results collected so far and keeps the scraper running; the browser displays those partial results and switches to the spreadsheet. Use the results sync control later to load any additional results.
+
+For Cloudflare Tunnel, point the tunnel at the app server (for example, `http://localhost:8080`) and bypass caching for `/api/*`.
 
 ## Install on a Remote Linux Server
 

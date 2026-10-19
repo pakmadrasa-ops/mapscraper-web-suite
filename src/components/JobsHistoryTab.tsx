@@ -69,6 +69,8 @@ export const JobsHistoryTab: React.FC = () => {
                   <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border ${
                     job.status === 'completed'
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : job.status === 'partial'
+                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                       : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
                   }`}>
                     {job.status}

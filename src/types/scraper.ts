@@ -117,7 +117,7 @@ export interface ScrapingJob {
   id: string;
   name: string;
   timestamp: string;
-  status: 'idle' | 'running' | 'completed' | 'failed' | 'paused';
+  status: 'idle' | 'running' | 'completed' | 'partial' | 'failed' | 'paused';
   flags: ScraperFlags;
   generatedCommand: string;
   progress: number;

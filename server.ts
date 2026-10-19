@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { createHash, createPrivateKey, createPublicKey, randomBytes, scrypt, sign, timingSafeEqual, verify } from 'crypto';
+import { createHash, createPrivateKey, createPublicKey, randomBytes, randomUUID, scrypt, sign, timingSafeEqual, verify } from 'crypto';
 import { spawn, type ChildProcess } from 'child_process';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
@@ -806,6 +806,7 @@ app.post('/api/auth/logout', (req, res) => {
 
 // Ensure gmaps-output and webdata directories exist
 const outputDir = path.resolve(process.cwd(), 'gmaps-output');
+const SCRAPER_RESPONSE_TIMEOUT_MS = 75_000;
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
@@ -909,6 +910,9 @@ function readLatestOutputPlaces(preferredFile?: string): { filePath: string; pla
  * API: Read results directly from disk (fast cached read)
  */
 app.get('/api/scrape/results', (req, res) => {
+  if (currentJobState.isRunning && currentJobState.outputFile) {
+    placesCache.delete(currentJobState.outputFile);
+  }
   const { filePath, places } = readLatestOutputPlaces(currentJobState.outputFile || undefined);
 
   if (places.length > 0) {
@@ -926,16 +930,6 @@ app.get('/api/scrape/results', (req, res) => {
     filePath,
     total: 0,
     places: [],
-  });
-});
-
-/**
- * API: Poll active job status & live logs
- */
-app.get('/api/scrape/status', (req, res) => {
-  return res.json({
-    ...currentJobState,
-    elapsedMs: currentJobState.startTime ? Date.now() - currentJobState.startTime : 0,
   });
 });
 
@@ -969,8 +963,16 @@ app.post('/api/scrape/cancel', (req, res) => {
  * Optimized to be completely non-blocking and immediate.
  */
 app.post('/api/scrape/run', async (req, res) => {
+  res.set({
+    'Cache-Control': 'private, no-store, no-cache, max-age=0, must-revalidate',
+    'CDN-Cache-Control': 'no-store',
+    'Cloudflare-CDN-Cache-Control': 'no-store',
+    Pragma: 'no-cache',
+    Expires: '0',
+  });
+
   // If already running, prevent duplicate spawn conflict
-  if (currentJobState.isRunning && activeScraperProcess) {
+  if (currentJobState.isRunning || activeScraperProcess) {
     return res.status(409).json({
       success: false,
       message: 'A scrape job is already currently executing in the background.',
@@ -1023,7 +1025,7 @@ app.post('/api/scrape/run', async (req, res) => {
   // Save queries file
   fs.writeFileSync(queryFilePath, rawInput.trim(), 'utf-8');
 
-  const jobId = `job_${Date.now()}`;
+  const jobId = `job_${randomUUID()}`;
   currentJobState = {
     id: jobId,
     isRunning: true,
@@ -1052,6 +1054,7 @@ app.post('/api/scrape/run', async (req, res) => {
   addLog('info', `[CONFIG] -json mode enforced | Output destination: ${outputFilePath}`);
 
   const binaryPath = findScraperBinary();
+  let responseTimedOut = false;
 
   if (binaryPath) {
     addLog('info', `[BINARY] Executable found: ${binaryPath}`);
@@ -1084,6 +1087,10 @@ app.post('/api/scrape/run', async (req, res) => {
       });
 
       activeScraperProcess = child;
+      const scraperFinished = new Promise<number | null>(resolve => {
+        child.once('close', resolve);
+        child.once('error', () => resolve(-1));
+      });
 
       child.stdout.on('data', data => {
         const text = data.toString().trim();
@@ -1108,7 +1115,7 @@ app.post('/api/scrape/run', async (req, res) => {
       child.on('close', code => {
         currentJobState.exitCode = code ?? -1;
         currentJobState.isRunning = false;
-        activeScraperProcess = null;
+        if (activeScraperProcess === child) activeScraperProcess = null;
         placesCache.delete(outputFilePath);
         const { places } = readLatestOutputPlaces(outputFilePath);
         currentJobState.scrapedCount = places.length;
@@ -1116,8 +1123,24 @@ app.post('/api/scrape/run', async (req, res) => {
         addLog(code === 0 ? 'success' : 'error', `Scraper finished with exit code ${code ?? 'unknown'}`);
       });
 
-      // Quick 200ms grace period to check if binary initialized or output was immediate
-      await new Promise(resolve => setTimeout(resolve, 200));
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+      const waitResult = await Promise.race([
+        scraperFinished.then(exitCode => ({ timedOut: false, exitCode })),
+        new Promise<{ timedOut: true; exitCode: null }>(resolve => {
+          timeoutHandle = setTimeout(
+            () => resolve({ timedOut: true, exitCode: null }),
+            SCRAPER_RESPONSE_TIMEOUT_MS
+          );
+        }),
+      ]);
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      responseTimedOut = waitResult.timedOut;
+      if (responseTimedOut) {
+        addLog(
+          'warn',
+          `[TIMEOUT] Returning a results snapshot after ${SCRAPER_RESPONSE_TIMEOUT_MS / 1000}s; scraper continues in the background.`
+        );
+      }
 
     } catch (err: any) {
       addLog('error', `Failed to execute binary: ${err.message}`);
@@ -1131,21 +1154,19 @@ app.post('/api/scrape/run', async (req, res) => {
     currentJobState.isRunning = false;
   }
 
-  // Read latest results immediately (fast cached)
+  if (responseTimedOut) placesCache.delete(outputFilePath);
   const places = binaryPath ? readLatestOutputPlaces(outputFilePath).places : [];
   currentJobState.scrapedCount = places.length;
-  if (!activeScraperProcess && currentJobState.exitCode === 0) {
+  if (!currentJobState.isRunning && currentJobState.exitCode === 0) {
     currentJobState.progress = 100;
-  }
-
-  if (binaryPath) {
-    addLog('info', '[READY] Scraper launched; waiting for it to finish before loading results.');
   }
 
   return res.json({
     success: true,
     jobId,
     isRunning: currentJobState.isRunning,
+    timedOut: responseTimedOut,
+    responseTimeoutMs: SCRAPER_RESPONSE_TIMEOUT_MS,
     total: places.length,
     places: binaryPath ? places : [],
     logs: currentJobState.logs,
