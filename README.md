@@ -6,6 +6,20 @@
 
 Search Google Maps places, configure search areas, and explore results in a spreadsheet.
 
+## Screenshots
+
+<div align="center">
+  <img src="./Images/maptajrpk1.png" alt="Google Maps Search Engine dashboard" width="900" />
+  <br /><br />
+  <img src="./Images/maptajrpk2.png" alt="Search configuration" width="900" />
+  <br /><br />
+  <img src="./Images/maptajrpk3.png" alt="Map results output" width="900" />
+  <br /><br />
+  <img src="./Images/maptajrpk4.png" alt="Spreadsheet export" width="900" />
+  <br /><br />
+  <img src="./Images/maptajrpk5.png" alt="Google Maps search results overview" width="900" />
+</div>
+
 ## Run Locally
 
 **Prerequisites:** Node.js 20.19+ or 22.12+.
