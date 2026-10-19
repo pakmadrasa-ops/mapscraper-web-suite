@@ -115,7 +115,7 @@ sudo journalctl -u mapscraper -f
 
 The `gmaps-output` directory must remain writable by the service account so it can store queries and results. For public production access, use a domain with HTTPS and a reverse proxy such as Nginx or Caddy; avoid exposing the app's port directly when a reverse proxy is configured.
 
-Or download the [binary release](https://github.com/gosom/google-maps-scraper/releases) for your platform.
+Or download the [binary release](https://github.com/gosom/google-maps-scraper/releases) for your platform, for linux [use](https://github.com/gosom/google-maps-scraper/releases/download/v1.18.1/google_maps_scraper-1.18.1-linux-amd64).
 
 ### Docker note
 
